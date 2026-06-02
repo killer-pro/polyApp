@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/USER/$(request.auth.token.email)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && userRole() in ['ADMIN', 'ADMIN_MB'];
+    }
+
+    function isSportAdmin() {
+      return isAuthenticated() && userRole() in [
+        'ADMIN', 'ADMIN_MB',
+        'ADMIN_FOOTBALL', 'ADMIN_BASKETBALL',
+        'ADMIN_VOLLEYBALL', 'ADMIN_JEUX_ESPRIT'
+      ];
+    }
+
+    function isShopAdmin() {
+      return isAuthenticated() && userRole() in ['ADMIN', 'ADMIN_MB', 'ADMIN_PSHOP'];
+    }
+
+    // ── Utilisateurs ──────────────────────────────────────────────────────────
+    match /USER/{email} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.token.email == email;
+      allow update: if isAuthenticated() &&
+        (request.auth.token.email == email || isAdmin());
+      allow delete: if isAuthenticated() &&
+        (request.auth.token.email == email || isAdmin());
+    }
+
+    // ── Promos ────────────────────────────────────────────────────────────────
+    match /PROMO/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Annonces ──────────────────────────────────────────────────────────────
+    match /ANNONCE/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /CATEGORIE/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /HOTTOPICS/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Sport ─────────────────────────────────────────────────────────────────
+    match /MATCH/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isSportAdmin();
+      allow delete: if isSportAdmin();
+    }
+
+    match /EQUIPE/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isSportAdmin();
+    }
+
+    match /MEMBRES/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isSportAdmin();
+    }
+
+    // ── Shop ──────────────────────────────────────────────────────────────────
+    match /ARTICLE/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isShopAdmin();
+    }
+
+    match /CATEGORIESHOP/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isShopAdmin();
+    }
+
+    match /COLLECTION/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isShopAdmin();
+    }
+
+    match /COMMANDE/{id} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.token.email || isShopAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() &&
+        (resource.data.userId == request.auth.token.email || isShopAdmin());
+    }
+
+    // ── Jeux ──────────────────────────────────────────────────────────────────
+    match /JEUX/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Objets perdus ─────────────────────────────────────────────────────────
+    match /LOSTOBJECTS/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+        (resource.data.idUser == request.auth.token.email || isAdmin());
+      allow delete: if isAuthenticated() &&
+        (resource.data.idUser == request.auth.token.email || isAdmin());
+    }
+
+    // ── Xoss ──────────────────────────────────────────────────────────────────
+    match /XOSS/{id} {
+      allow read: if isAuthenticated() &&
+        (resource.data.user.email == request.auth.token.email || isAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+        (resource.data.user.email == request.auth.token.email || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ── Tokens FCM ────────────────────────────────────────────────────────────
+    match /TOKEN/{token} {
+      allow read: if isAdmin();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Paramètres ────────────────────────────────────────────────────────────
+    match /PARAMETRE/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

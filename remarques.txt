@@ -1,0 +1,168 @@
+REMARQUES — AUDIT POLYAPP (MARS 2026)
+======================================
+
+SECURITE
+--------
+1. [CRITIQUE] Les clés du compte de service Google (Firebase Admin) sont chargées
+   depuis le fichier .env directement dans l'app client (NotificationService).
+   N'importe qui peut extraire l'APK et voler ces clés. L'envoi de notifications FCM
+   doit être déplacé vers une Cloud Function Firebase.
+
+2. [CRITIQUE] Les méthodes de suppression (deleteAnnonce, removeMatch, etc.) ne
+   vérifient pas si l'utilisateur est administrateur avant d'exécuter. Tout
+   utilisateur connecté peut supprimer du contenu.
+
+3. Les règles Firestore sont trop permissives (tout utilisateur connecté peut tout
+   lire et écrire). Des règles précises par collection sont nécessaires en production.
+
+4. Le token FCM est stocké dans le document USER de Firestore, accessible
+   potentiellement par d'autres utilisateurs.
+
+5. L'URL de l'API FCM contient l'ID du projet Firebase en dur dans le code source.
+
+
+BUGS DE DONNEES
+---------------
+6. [CRITIQUE] Dans xoss.dart (fromJson), la date est toujours remplacée par
+   DateTime.now() au lieu de lire la valeur stockée en base. Toutes les dates de
+   transactions Xoss sont perdues à chaque rechargement de l'app.
+
+7. Dans detail_match.dart (environ ligne 334), le compteur de cartons rouges affiche
+   redCardA deux fois au lieu d'afficher redCardA et redCardB.
+
+8. ObjetPerdu.date est stocké en String au lieu de DateTime, les tris chronologiques
+   sont impossibles. De plus, toJson() omet le champ "details".
+
+9. Dans Football.fromJson, une variable non définie est référencée, ce qui peut
+   provoquer un crash à la désérialisation des matchs de football.
+
+10. Dans Xoss, le champ "versement" est toujours désérialisé à 0 quelle que soit
+    la valeur en base. Champ non fonctionnel.
+
+
+MODELES DE DONNEES ET SCHEMA FIRESTORE
+---------------------------------------
+11. Plusieurs modèles embarquent des objets complets au lieu de références :
+    - Match embarque les deux équipes avec tous leurs joueurs
+    - Match embarque la liste complète des utilisateurs qui ont liké/disliké
+    - Annonce et Match embarquent les commentaires avec profil complet de l'auteur
+    - Xoss embarque un profil Utilisateur complet
+    Un match avec beaucoup d'activité peut dépasser la limite de 1MB par document
+    Firestore et crasher silencieusement.
+
+12. Champs manquants importants :
+    - Annonce : pas d'auteur (userId)
+    - HotTopic : pas d'auteur
+    - Commande : pas de statut (en attente, confirmé, livré, annulé)
+    - Match : pas de statut (programmé, en cours, terminé)
+    - ObjetPerdu : pas de createdAt, pas d'info sur qui a retrouvé l'objet
+    - Presque tous les modèles : pas de updatedAt
+
+13. Mauvais types sur certains champs :
+    - ObjetPerdu.estTrouve utilise int au lieu de l'enum Etat
+    - Joueur.position utilise String au lieu de l'enum PositionJoueur
+    - HotTopic.category utilise String au lieu d'un enum ou référence Categorie
+    - Membre.sport utilise String au lieu de SportType
+
+14. La collection USER utilise l'email comme clé de document. Si un utilisateur
+    change d'adresse email, tous les liens vers son profil sont cassés.
+
+15. Le modèle Role (role.dart) duplique RoleType déjà défini dans enums/role_type.dart.
+    L'un des deux doit être supprimé.
+
+16. Commission.dart est entièrement commenté (modèle inutilisé). A supprimer.
+
+17. Les collections TOKEN et PARAMETRE sont utilisées dans les services mais n'ont
+    pas de classe modèle Dart correspondante.
+
+
+SERVICES — CRUD INCOMPLETS
+---------------------------
+18. LostFoundService n'a pas de méthode deleteLostObject(). Les utilisateurs ne
+    peuvent pas supprimer leurs signalements.
+
+19. UserService n'a pas de méthode deleteUser(). Problème de conformité RGPD :
+    un utilisateur ne peut pas demander la suppression de son compte et de ses données.
+
+20. JeuService n'a pas de méthode pour supprimer un jeu au niveau racine.
+
+21. XossService n'a pas de méthode deleteXoss(). Les anciennes transactions ne
+    peuvent pas être supprimées.
+
+
+GESTION DES ERREURS
+--------------------
+22. Environ 90% des erreurs dans les services sont silencieuses : capturées par
+    catch(e) qui retourne null ou une liste vide sans aucun feedback à l'interface.
+    L'utilisateur ne sait jamais si une opération a réussi ou échoué.
+
+23. signInWithEmailAndPassword bloque silencieusement les emails non vérifiés en
+    retournant null sans expliquer pourquoi à l'interface de login.
+
+24. L'échec d'envoi d'une notification FCM est loggé dans un commentaire
+    (//debugPrint) — le code est donc inactif et les échecs passent inaperçus.
+
+
+UX — WORKFLOWS INCOMPLETS
+--------------------------
+25. Le shop n'a pas de panier. La commande est immédiate et irréversible, sans
+    récapitulatif ni sélection de mode de paiement. Le statut des commandes n'est
+    pas affiché après achat.
+
+26. Le bouton "Voir communiqué" sur la card AG (Assemblée Générale) est commenté
+    dans le code. Les utilisateurs voient une carte sans action possible.
+
+27. HotTopicsService fonctionne mais l'interface admin pour créer/modifier les
+    Hot Topics n'est pas intégrée dans les pages.
+
+28. Firebase Messaging est intégré et les notifications sont envoyées, mais
+    aucun écran ne permet de consulter l'historique des notifications reçues.
+
+29. Dans les sessions de jeux, l'email brut du créateur est affiché au lieu de
+    son prénom et nom (creatorId non résolu en nom d'affichage).
+
+30. Les annonces n'ont pas de page de détail dédiée. Le contenu complet n'est
+    pas accessible depuis la liste.
+
+
+UX — PATTERNS INCOHERENTS
+--------------------------
+31. Les états de chargement (CircularProgressIndicator) sont présents dans certains
+    écrans et absents dans d'autres pour des opérations équivalentes.
+
+32. Les états vides sont incohérents : certains écrans affichent un message,
+    d'autres restent simplement blancs.
+
+33. La validation des formulaires est quasi inexistante. La plupart des erreurs
+    de saisie ne sont signalées qu'après soumission via snackbar, sans indication
+    visuelle sur les champs concernés.
+
+34. Les suppressions (commandes, commentaires) s'effectuent sans dialog de
+    confirmation. La suppression de commentaire par appui long n'est pas signalée
+    à l'utilisateur.
+
+
+ARCHITECTURE ET QUALITE DU CODE
+---------------------------------
+35. Pas de gestion d'état centralisée (pas de Provider, Riverpod, Bloc). Cela
+    fonctionne mais devient difficile à maintenir quand plusieurs écrans partagent
+    le même état.
+
+36. Chaque service instancie ses propres dépendances Firebase sans injection.
+    Il est impossible d'écrire des tests unitaires sans appeler Firebase.
+
+37. api_service.dart est entièrement commenté (50 lignes). Fichier à supprimer.
+
+38. main.dart contient environ 26 lignes de code de vérification de version
+    commentées et un wrapper FutureBuilder commenté.
+
+39. NotificationService contient 46 lignes de flow de permission commentées.
+
+40. Environ 200 occurrences de //debugPrint() dans les fichiers de services.
+    Code commenté qui pollue la lisibilité.
+
+41. Packages déclarés dans pubspec.yaml mais non utilisés : photo_view,
+    flutter_localization, file_picker, app_version_update.
+
+42. Le package "image" est utilisé dans user_service.dart mais n'est pas déclaré
+    dans pubspec.yaml. Fonctionne en dépendance transitive mais fragile.

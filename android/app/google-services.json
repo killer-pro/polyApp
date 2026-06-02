@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "515846350273",
+    "project_id": "ept-app-46930",
+    "storage_bucket": "ept-app-46930.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:515846350273:android:9e5fb5e28d53e8c643bb40",
+        "android_client_info": {
+          "package_name": "sn.ept.pic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe5vCoT88TKLVxGDrHN0kUDVNtToDqigk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:515846350273:android:6a43601272cded5e43bb40",
+        "android_client_info": {
+          "package_name": "sn.ept.pic.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe5vCoT88TKLVxGDrHN0kUDVNtToDqigk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

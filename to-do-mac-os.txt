@@ -1,0 +1,112 @@
+========================================================
+  ÉTAPES MANUELLES À FAIRE DANS XCODE — PolyApp iOS
+========================================================
+
+Ouvre le projet avec : ouvrir ios/Runner.xcworkspace (PAS .xcodeproj)
+
+
+────────────────────────────────────────────────────────
+1. SIGNING — Configurer ton équipe Apple Developer
+────────────────────────────────────────────────────────
+1. Dans Xcode, clique sur "Runner" dans le panneau gauche (le dossier bleu tout en haut)
+2. Sélectionne le target "Runner" (pas RunnerTests)
+3. Onglet "Signing & Capabilities"
+4. Coche "Automatically manage signing"
+5. Dans "Team", sélectionne ton compte Apple Developer
+   → Ton Team ID est visible sur https://developer.apple.com → Account → Membership
+6. Le Bundle Identifier doit être : sn.ept.pic
+
+Ensuite dans le Podfile (ios/Podfile), remplace :
+   config.build_settings['DEVELOPMENT_TEAM'] = 'YOUR_TEAM_ID'
+par ton vrai Team ID, ex :
+   config.build_settings['DEVELOPMENT_TEAM'] = 'AB12CD34EF'
+
+Puis relance : cd ios && pod install
+
+
+────────────────────────────────────────────────────────
+2. PUSH NOTIFICATIONS — Ajouter la capability
+────────────────────────────────────────────────────────
+1. Target "Runner" → onglet "Signing & Capabilities"
+2. Clique le bouton "+" (en haut à gauche de la section)
+3. Cherche "Push Notifications" → double-clique pour l'ajouter
+   → Xcode va automatiquement lier Runner.entitlements (déjà créé)
+4. Clique encore "+" → cherche "Background Modes" → ajoute-le
+5. Dans Background Modes, coche :
+   ✅ Remote notifications
+   ✅ Background fetch
+
+
+────────────────────────────────────────────────────────
+3. FIREBASE CLOUD MESSAGING — Clé APNs
+────────────────────────────────────────────────────────
+Pour que les notifications Firebase fonctionnent sur iOS,
+il faut uploader ta clé APNs dans la console Firebase :
+
+1. Va sur https://console.firebase.google.com
+2. Sélectionne le projet "ept-app-46930"
+3. Paramètres du projet (⚙️) → onglet "Cloud Messaging"
+4. Section "Configuration de l'application Apple"
+5. Upload soit :
+   - Clé d'authentification APNs (.p8) — recommandé
+   - ou Certificat APNs (.p12)
+   Ces fichiers se génèrent sur https://developer.apple.com
+   → Certificates, Identifiers & Profiles → Keys → "+" → Apple Push Notifications service (APNs)
+
+
+────────────────────────────────────────────────────────
+4. GOOGLESERVICE-INFO.PLIST — Vérifier qu'il est inclus
+────────────────────────────────────────────────────────
+1. Dans le panneau gauche de Xcode, vérifie que
+   "GoogleService-Info.plist" est bien visible sous Runner/
+2. Clique dessus → dans le panneau droit (File Inspector),
+   vérifie que "Target Membership" a ✅ Runner coché
+3. Si le fichier n'apparaît pas : File → Add Files to "Runner"
+   → sélectionne ios/Runner/GoogleService-Info.plist
+
+
+────────────────────────────────────────────────────────
+5. RUNNER.ENTITLEMENTS — Vérifier qu'il est lié
+────────────────────────────────────────────────────────
+1. Target "Runner" → onglet "Build Settings"
+2. Cherche "Code Signing Entitlements"
+3. La valeur doit être : Runner/Runner.entitlements
+   Si vide, tape : Runner/Runner.entitlements
+   (Xcode le remplit automatiquement si tu as ajouté Push
+    Notifications via l'onglet Signing & Capabilities)
+
+
+────────────────────────────────────────────────────────
+6. AVANT DE SOUMETTRE SUR L'APP STORE (release)
+────────────────────────────────────────────────────────
+- Dans Runner.entitlements :
+    Changer "development" → "production"
+    <string>production</string>
+
+- Dans Info.plist :
+    Remplacer NSAllowsArbitraryLoads = true par des domaines
+    spécifiques (ATS) pour respecter les règles Apple.
+
+- Vérifier que le Bundle ID (sn.ept.pic) correspond bien
+  à l'app enregistrée sur App Store Connect.
+
+
+────────────────────────────────────────────────────────
+7. TESTER SUR DEVICE PHYSIQUE
+────────────────────────────────────────────────────────
+1. Branche ton iPhone en USB
+2. Dans Xcode, sélectionne ton iPhone comme target (en haut)
+3. Produit → Run (⌘R)
+4. La première fois : sur l'iPhone, va dans
+   Réglages → Général → Gestion de l'appareil
+   → Faire confiance à [ton compte développeur]
+5. Pour tester les notifications : elles ne fonctionnent PAS
+   sur simulateur, uniquement sur device physique réel.
+
+========================================================
+  RÉCAPITULATIF DES FICHIERS DÉJÀ CORRIGÉS PAR CODE
+========================================================
+✅ ios/Runner/Info.plist           — permissions + background modes + LSApplicationQueriesSchemes
+✅ ios/Runner/GoogleService-Info.plist — BUNDLE_ID corrigé (sn.ept.pic)
+✅ ios/Runner/Runner.entitlements  — créé avec aps-environment: development
+✅ ios/Runner/AppDelegate.swift    — Firebase + FCM + UNUserNotificationCenter configurés

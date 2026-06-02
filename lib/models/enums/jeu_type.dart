@@ -1,0 +1,1 @@
+enum JeuType { SCRABBLE, MONOPOLY, UNO, LOUP_GAROU }
