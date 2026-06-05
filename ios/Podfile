@@ -39,7 +39,7 @@ target 'Runner' do
   pod 'Firebase/Messaging'
 
   # Configuration spécifique d'Abseil
-  pod 'abseil', '~> 1.20240116.0'
+  pod 'abseil', '~> 1.20240722.0'
 
   # Installation des pods Flutter
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
@@ -66,12 +66,6 @@ post_install do |installer|
       # Exclure l'architecture arm64 pour le simulateur
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
 
-      # Configuration spécifique pour Abseil
-      if target.name.include?('abseil')
-        config.build_settings['OTHER_LDFLAGS'] = '$(inherited) -all_load'
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = ['$(inherited)', 'COCOAPODS=1', 'ABSL_USES_EXTERNAL_STRING_VIEW=1']
-      end
 
       # Configuration pour Firebase
       if target.name.include?('Firebase')
